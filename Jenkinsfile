@@ -1,42 +1,44 @@
 pipeline {
-    agent any0
+    agent any
+    
+    parameters {
+        string(name: 'AWS_ACCOUNT_ID', description: 'AWS Account ID')
+        string(name: 'BUCKET_NAME', description: 'S3 Bucket Name')
+        string(name: 'REPORT_BUCKET_NAME', description: 'S3 Report Bucket Name')
+        string(name: 'ROLE_NAME', description: 'IAM Role Name')
+    }
+    
     environment {
-        // Define environment variables for AWS credentials
-        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id') // Replace with your credentials ID
-        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key') // Replace with your credentials ID
+        AWS_ACCESS_KEY_ID = credentials('ACCOUNT_ACCESS_KEY')
+        AWS_SECRET_ACCESS_KEY = credentials('ACCOUNT_SECRET_KEY')
     }
+    
     stages {
-        stage('Checkout') {
+        stage('Clone Repository') {
             steps {
-                // Checkout the source code from the repository
-                checkout scm
+                git branch: 'main', url: 'https://github.com/belal-b-ali/jenkins-BO.git'
             }
         }
-        stage('Install Dependencies') {
+        stage('install req') {
             steps {
-                // Install the required Python dependencies
-                sh 'pip install boto3'
+                sh '''#!/bin/bash
+                    python3 -m venv venv
+                    source venv/bin/activate
+                    pip install boto3
+                '''
             }
         }
-        stage('Run Script') {
+        stage('Run Python Script') {
             steps {
-                // Run the Python script with the necessary arguments
-                sh """
-                python your_script.py \
-                    --source_aws_access_key_id $AWS_ACCESS_KEY_ID \
-                    --source_aws_secret_access_key $AWS_SECRET_ACCESS_KEY \
-                    --source_aws_account_id your-source-account-id \
-                    --source_bucket your-source-bucket-name \
-                    --report_bucket your-report-bucket-name \
-                    --role_name your-role-name
-                """
+                script {
+                    sh '''#!/bin/bash
+                        source venv/bin/activate
+                        export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+                        export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+                        python3 -m main --aws_account_id=${AWS_ACCOUNT_ID} --bucket=${BUCKET} --report_bucket=${REPORT_BUCKET} --role_name=${ROLE_NAME}
+                    '''
+                }
             }
-        }
-    }
-    post {
-        always {
-            // Clean up after build
-            cleanWs()
         }
     }
 }

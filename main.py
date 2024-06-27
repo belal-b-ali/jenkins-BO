@@ -414,10 +414,10 @@ import os
 import uuid
 import argparse
 
-source_aws_access_key_id = os.environ.get("SOURCE_ACCOUNT_ACCESS_KEY")
-source_aws_secret_access_key = os.environ.get("SOURCE_ACCOUNT_SECRET_KEY")
-source_account_id = os.environ.get("SOURCE_ACCOUNT_ID", "592052461894")
-source_bucket_name = os.environ.get("SOURCE_BUCKET_NAME", "bali-test-bucket")
+aws_access_key_id = os.environ.get("ACCOUNT_ACCESS_KEY")
+aws_secret_access_key = os.environ.get("ACCOUNT_SECRET_KEY")
+account_id = os.environ.get("ACCOUNT_ID", "592052461894")
+bucket_name = os.environ.get("BUCKET_NAME", "bali-test-bucket")
 
 completion_report_bucket = os.environ.get("COMPLETION_REPORT_BUCKET", "bali-test-bucket-batch-operation-reports1")
 
@@ -630,15 +630,15 @@ def get_s3control_client(aws_access_key_id: str, aws_secret_access_key: str) -> 
 
     return boto3_session.client('s3control', region_name = boto3_session.region_name)
 
-def create_batch_job_to_copy_existing_objects(source_aws_access_key_id: str, source_aws_secret_access_key: str, source_aws_account_id: str, source_bucket: str, report_bucket: str, role_name: str) -> None:
+def create_batch_job_to_copy_existing_objects(aws_access_key_id: str, aws_secret_access_key: str, aws_account_id: str, bucket: str, report_bucket: str, role_name: str) -> None:
     """
     Create a batch job to copy existing objects from the source bucket to the destination.
 
     Args:
-        source_aws_access_key_id (str): Source AWS access key ID.
-        source_aws_secret_access_key (str): Source AWS secret access key.
-        source_aws_account_id (str): Source AWS account ID.
-        source_bucket (str): Source bucket name.
+        aws_access_key_id (str): Source AWS access key ID.
+        aws_secret_access_key (str): Source AWS secret access key.
+        aws_account_id (str): Source AWS account ID.
+        bucket (str): Source bucket name.
         report_bucket (str): Report bucket name.
         role_name (str): Role name for the job.
     """
@@ -646,10 +646,10 @@ def create_batch_job_to_copy_existing_objects(source_aws_access_key_id: str, sou
 
     token = str(uuid.uuid4())
 
-    cl = get_s3control_client(source_aws_access_key_id, source_aws_secret_access_key)
+    cl = get_s3control_client(aws_access_key_id, aws_secret_access_key)
 
     response = cl.create_job(
-        AccountId = source_aws_account_id,
+        AccountId = aws_account_id,
         ConfirmationRequired = False,
         Operation = {
             'S3ReplicateObject': {}
@@ -664,10 +664,10 @@ def create_batch_job_to_copy_existing_objects(source_aws_access_key_id: str, sou
         ClientRequestToken = token,
         ManifestGenerator = {
             'S3JobManifestGenerator': {
-                'ExpectedBucketOwner': source_aws_account_id,
-                'SourceBucket': f"arn:aws:s3:::{source_bucket}",
+                'ExpectedBucketOwner': aws_account_id,
+                'SourceBucket': f"arn:aws:s3:::{bucket}",
                 'ManifestOutputLocation': {
-                    'ExpectedManifestBucketOwner': source_aws_account_id,
+                    'ExpectedManifestBucketOwner': aws_account_id,
                     'Bucket': f"arn:aws:s3:::{report_bucket}",
                     'ManifestPrefix': 'manifest/',
                     'ManifestEncryption': {
@@ -682,7 +682,7 @@ def create_batch_job_to_copy_existing_objects(source_aws_access_key_id: str, sou
             }
         },
         Priority = 1,
-        RoleArn = f"arn:aws:iam::{source_aws_account_id}:role/{role_name}"
+        RoleArn = f"arn:aws:iam::{aws_account_id}:role/{role_name}"
     )
 
     print(response)
@@ -697,10 +697,10 @@ def parse_arguments() -> argparse.Namespace:
         argparse.Namespace: Parsed arguments.
     """
     parser = argparse.ArgumentParser(description='Create a batch job to copy existing objects.')
-    parser.add_argument('--source_aws_access_key_id', required=True, help='Source AWS access key ID')
-    parser.add_argument('--source_aws_secret_access_key', required=True, help='Source AWS secret access key')
-    parser.add_argument('--source_aws_account_id', required=True, help='Source AWS account ID')
-    parser.add_argument('--source_bucket', required=True, help='Source bucket name')
+    # parser.add_argument('--source_aws_access_key_id', required=True, help='Source AWS access key ID')
+    # parser.add_argument('--source_aws_secret_access_key', required=True, help='Source AWS secret access key')
+    parser.add_argument('--aws_account_id', required=True, help='AWS account ID')
+    parser.add_argument('--bucket', required=True, help='bucket name')
     parser.add_argument('--report_bucket', required=True, help='Report bucket name')
     parser.add_argument('--role_name', required=True, help='Role name for the job')
 
@@ -708,11 +708,16 @@ def parse_arguments() -> argparse.Namespace:
 
 if __name__ == "__main__":
     args = parse_arguments()
-    create_batch_job_to_copy_existing_objects(
-        args.source_aws_access_key_id,
-        args.source_aws_secret_access_key,
-        args.source_aws_account_id,
-        args.source_bucket,
-        args.report_bucket,
-        args.role_name
-    )
+    print(">>>>>")
+    print(args)
+    print(aws_access_key_id)
+    print(aws_secret_access_key)
+    print(">>>>>")
+    # create_batch_job_to_copy_existing_objects(
+    #     source_aws_access_key_id,
+    #     source_aws_secret_access_key,
+    #     args.source_aws_account_id,
+    #     args.source_bucket,
+    #     args.report_bucket,
+    #     args.role_name
+    # )
